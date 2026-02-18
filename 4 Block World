@@ -1,0 +1,74 @@
+
+from collections import deque
+import copy
+
+class BlocksWorld:
+    def __init__(self, initial_state, goal_state):
+        self.initial_state = self.sort_state(initial_state)
+        self.goal_state = self.sort_state(goal_state)
+
+    def sort_state(self, state):
+        # Keeps state representation consistent for comparison
+        return tuple(sorted(state))
+
+    def get_clear_blocks(self, state):
+        # A block is clear if nothing is on top of it
+        all_blocks = {b for move in state for b in move if isinstance(b, str)}
+        on_top = {move[0] for move in state if len(move) == 2}
+        return all_blocks - on_top
+
+    def get_neighbors(self, state):
+        neighbors = []
+        clear_blocks = self.get_clear_blocks(state)
+        
+        for block in clear_blocks:
+            # Find where the block currently is
+            current_pos = None
+            new_state_base = list(state)
+            for relation in state:
+                if relation[0] == block:
+                    current_pos = relation
+                    break
+            
+            new_state_base.remove(current_pos)
+            
+            # Move to Table
+            if len(current_pos) == 2: # If it wasn't already on table
+                neighbor = self.sort_state(new_state_base + [(block,)])
+                neighbors.append(neighbor)
+            
+            # Move to another clear block
+            for target in clear_blocks:
+                if block != target:
+                    neighbor = self.sort_state(new_state_base + [(block, target)])
+                    neighbors.append(neighbor)
+                    
+        return neighbors
+
+    def solve(self):
+        queue = deque([(self.initial_state, [])])
+        visited = {self.initial_state}
+
+        while queue:
+            current_state, path = queue.popleft()
+
+            if current_state == self.goal_state:
+                return path + [current_state]
+
+            for neighbor in self.get_neighbors(current_state):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, path + [current_state]))
+        return None
+
+# Define States: (A, B) means A is ON B. (A,) means A is ON TABLE.
+# Example: Start with A on Table, B on A. Goal: B on Table, A on B.
+initial = [('B', 'A'), ('A',)] 
+goal = [('A', 'B'), ('B',)]
+
+bw = BlocksWorld(initial, goal)
+solution = bw.solve()
+
+print("Steps to reach goal:")
+for i, step in enumerate(solution):
+    print(f"Step {i}: {step}")
